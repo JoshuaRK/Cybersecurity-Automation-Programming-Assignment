@@ -15,10 +15,11 @@ this folder.
 UpdatedJSONs is a folder containing the recently grabbed data of JSONs from the
 whois website. 
 
+IMPORTANT:
 credentials.json is used to get user, password, port, and host for smtp mailing server
-to be used within main program of method sendEmail. Please replace with desired email and password 
-for credentials to be read proeprly within main method. CUrrent password is a randomly genreate password 
-and email.
+to be used within main program of method sendEmail. Current password is not the password 
+for account given. Please replace with desired email and password for credentials to be 
+read proeprly within main method. 
 
 requirements.txt is just used incase there are other libraries needed when modifications
 to the program arise.
