@@ -15,6 +15,9 @@ def loadDomains(file):
         readList = list_of_dict_values[0]
     return readList
 
+# takes in domains of readList and begins collecting information for JSON file creation per domain
+# directory is created to pointto right folder to store with createJSONFile
+# API key must be changed after some time due to using limited trial version
 def loadInfo(readList):
     updatedInfo = {} 
     emails = {}
@@ -41,6 +44,8 @@ def loadInfo(readList):
         createJSONFile(updatedInfo, fileNumber, directory)
         fileNumber = fileNumber+1
 
+# takes in dictionary of information along with current directory to create JSON files
+# and put each JSON file into the right UpdatedJSONs folder
 def createJSONFile(dict, n, directory):
     startLocal = os.getcwd() + "/"
     newLocal = startLocal+directory+"/"
@@ -50,8 +55,11 @@ def createJSONFile(dict, n, directory):
         f.close()
     shutil.move(startLocal+f'updated_info{n}.json', newLocal+f'updated_info{n}.json')
 
+# compares the folders of UpdatedJSONs and OLDUpdatedJSONs through compareJSONs method
+# attachment list is created and updated through compareJSONs method before pushing 
+# to sendEmail method with a given email that is currently but should be replaced.
 def compareFolders(server,user):
-    attatchmentList = []
+    attachmentList = []
     oldDirectory = os.getcwd() + "/OLDUpdatedJSONs"
     newDirectory = os.getcwd() + "/UpdatedJSONs"
     pathlistOld = Path(oldDirectory).rglob('*.json')
@@ -61,18 +69,21 @@ def compareFolders(server,user):
         newData = open(newpath)
         oldData = json.load(oldData)
         newData = json.load(newData)
-        compareJSONs(oldData,newData,attatchmentList)
+        compareJSONs(oldData,newData,attachmentList)
     sending_ts = datetime.now()
-    send_message(server, user, 
+    sendEmail(server, user, 
         to=["barbequebarbequebarbeque@gmail.com"], 
         subject= "Updated JSON files %s" % sending_ts.strftime('%Y-%m-%d %H:%M:%S'), 
         body="Daily updates of JSON files",
-        attachments=attatchmentList)
+        attachments=attachmentList)
 
-def compareJSONs(OldJSON, NewJSON, attatchmentList):
+# Compares old and new JSON files and if there is a difference, add it to attachmentList
+# Uses sorting method to reorder dictionary for easier comparison
+def compareJSONs(OldJSON, NewJSON, attachmentList):
     if sorting(OldJSON) != sorting(NewJSON):
-        attatchmentList.append(NewJSON)
+        attachmentList.append(NewJSON)
 
+# sorts given dictionary type item to be used for sorting
 def sorting(item):
     if isinstance(item, dict):
         return sorted((key, sorting(values)) for key, values in item.items())
@@ -81,15 +92,16 @@ def sorting(item):
     else:
         return item
 
-def connect2server(user, password, host, port):
-    """ Connect to an SMTP server. Note, this function assumes that the SMTP
-        server uses TTLS connection """
+# Connects to server with user, password, host, and port
+# Connect to an SMTP server. Note, this function assumes that the SMTP server uses TTLS connection
+def connectToServer(user, password, host, port):
     server = smtplib.SMTP(host=host,port=port)
     server.starttls()
     server.login(user=user, password=password)
     return server
 
-def send_message(server, user, to, subject, body, attachments):
+# Sends Email with attachments of all JSON files that have been found to been updated
+def sendEmail(server, user, to, subject, body, attachments):
     msg = MIMEMultipart()
     msg['From'] = user
     msg['To'] = ", ".join(to)
@@ -104,7 +116,7 @@ def send_message(server, user, to, subject, body, attachments):
 
     return server.sendmail(user, to, msg.as_string())
 
-
+# Gets Creation Date of domain along with client info
 def GetCreatedDate(domain, client):
     res = client.data(domain)
     if res.created_date_raw:
@@ -116,6 +128,7 @@ def GetCreatedDate(domain, client):
             dateCreation = res.audit['created_date_raw']
     return dateCreation
 
+# Gets Update Date of domain along with client info
 def GetUpdatedDate(domain, client):
     res = client.data(domain)
     if res.updated_date_raw:
@@ -127,6 +140,7 @@ def GetUpdatedDate(domain, client):
             dateUpdate = "N/A"
     return dateUpdate
 
+# Gets Expiration Date of domain along with client info
 def GetExpiresDate(domain, client):
     res = client.data(domain)
     if res.expires_date_raw:
@@ -138,6 +152,7 @@ def GetExpiresDate(domain, client):
             ExpiresDate = "N/A"
     return ExpiresDate
 
+# Gets Registrant Name of domain along with client info
 def GetRegistrantName(domain, client):
     res = client.data(domain)
     if res.registrar_name:
@@ -146,6 +161,7 @@ def GetRegistrantName(domain, client):
         nameRegistrant = "N/A"
     return nameRegistrant
 
+# Gets Get all possible emails of domain along with client info
 def GetEmails(domain, client):
     res = client.data(domain)
     if res.registrant:
@@ -176,10 +192,16 @@ def GetEmails(domain, client):
     
     return regEmail, adminEmail, techEmail, contactEmail
 
+# Gets Domain Name of domain along with client info
 def GetDomainName(domain, client):
     res = client.data(domain)
     return res.domain_name
 
+# main method for nicer look of program
+# Opens credentials.json to create dictionary with user, password, host, and port
+# loads the domains of the yml file to be used in loadInfo
+# open the server through connectToServer method and then runs compareFolders method
+# once all done, close server
 def main():
     with open("credentials.json", mode="r") as f:
         credentials = json.load(f)
@@ -191,7 +213,7 @@ def main():
 
     info = loadDomains('domains.yml')
     loadInfo(info)
-    server = connect2server(user=USER,password=PASSWORD,host=HOST,port=PORT)
+    server = connectToServer(user=USER,password=PASSWORD,host=HOST,port=PORT)
     compareFolders(server=server, user=USER)
     server.quit()
 
